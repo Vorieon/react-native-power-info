@@ -1,0 +1,30 @@
+{
+  "name": "react-native-power-info",
+  "version": "0.1.0",
+  "description": "Power and battery information for React Native",
+  "main": "index.js",
+  "react-native": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vorieon/react-native-power-info.git"
+  },
+  "keywords": [
+    "react-native",
+    "battery",
+    "power",
+    "charging",
+    "device",
+    "native-module",
+    "energy",
+    "android"
+  ],
+  "author": "Devik Gupta <devik.gupta@vorieon.com> (https://vorieon.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Vorieon/react-native-power-info/issues"
+  },
+  "homepage": "https://github.com/Vorieon/react-native-power-info#readme"
+}
