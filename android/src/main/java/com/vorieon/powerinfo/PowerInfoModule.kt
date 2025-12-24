@@ -1,11 +1,10 @@
 package com.vorieon.powerinfo
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
-import android.os.Handler
-import android.os.Looper
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import kotlin.math.roundToInt
@@ -14,11 +13,15 @@ class PowerInfoModule(private val reactContext: ReactApplicationContext) : React
 
   override fun getName(): String = "PowerInfo"
 
-  private val handler = Handler(Looper.getMainLooper())
-  private var runnable: Runnable? = null
+  // ------------------------------
+  // Helpers
+  // ------------------------------
 
   private fun batteryIntent(): Intent? {
-    return reactContext.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+    return reactContext.registerReceiver(
+      null,
+      IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+    )
   }
 
   private fun emit(event: String, params: WritableMap) {
@@ -27,7 +30,9 @@ class PowerInfoModule(private val reactContext: ReactApplicationContext) : React
       .emit(event, params)
   }
 
-  // ---------- One-time getters ----------
+  // ------------------------------
+  // One-shot Getters
+  // ------------------------------
 
   @ReactMethod
   fun getVoltage(promise: Promise) {
@@ -39,6 +44,7 @@ class PowerInfoModule(private val reactContext: ReactApplicationContext) : React
   @ReactMethod
   fun getCurrent(type: String?, promise: Promise) {
     val bm = reactContext.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+    
     val property = when (type) {
       "average" -> BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE
       else -> BatteryManager.BATTERY_PROPERTY_CURRENT_NOW
@@ -49,15 +55,13 @@ class PowerInfoModule(private val reactContext: ReactApplicationContext) : React
     promise.resolve(currentMa)
   }
 
-  // Get wattage... pending...
-
   @ReactMethod
   fun getBatteryLevel(promise: Promise) {
     val intent = batteryIntent()
     val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
     val scale = intent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
     
-    val batteryPct = if (level >= 0 && scale > 0) ((level.toFloat() / scale) * 100).roundToInt() else -1
+    val batteryPct = if (level >= 0 && scale > 0) ((level.toFloat() / scale) * 100).roundToInt().coerceIn(0, 100) else -1
     promise.resolve(batteryPct)
   }
 
@@ -107,8 +111,8 @@ class PowerInfoModule(private val reactContext: ReactApplicationContext) : React
   @ReactMethod
   fun getBatteryTemperature(promise: Promise) {
     val intent = batteryIntent()
-    val tempC = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
-    promise.resolve(tempC / 10.0)
+    val tempDeciC = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
+    promise.resolve(tempDeciC / 10.0) // In Celsius
   }
 
   @ReactMethod
@@ -123,6 +127,58 @@ class PowerInfoModule(private val reactContext: ReactApplicationContext) : React
     promise.resolve(cycles)
   }
 
-  // ---------- Monitoring ----------
+  // getremaining time
+
+  // ------------------------------
+  // Event-based Power State
+  // ------------------------------
+
+  private var receiverRegistered = false
+
+  private val powerReceiver = object : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+      val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+      val plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0)
+
+      val map = Arguments.createMap()
+
+      map.putBoolean(
+        "isPlugged",
+        plugged != 0
+      )
+      map.putBoolean(
+        "isCharging",
+        status == BatteryManager.BATTERY_STATUS_CHARGING ||
+        status == BatteryManager.BATTERY_STATUS_FULL
+      )
+
+      emit("powerState", map)
+    }
+  }
+
+  @ReactMethod
+  fun addPowerStateListener() {
+    if (receiverRegistered) return
+
+    val filter = IntentFilter().apply {
+      addAction(Intent.ACTION_BATTERY_CHANGED)
+    }
+
+    reactContext.registerReceiver(powerReceiver, filter)
+    receiverRegistered = true
+  }
+
+  @ReactMethod
+  fun removePowerStateListener() {
+    if (!receiverRegistered) return
+
+    try {
+      reactContext.unregisterReceiver(powerReceiver)
+    } catch (_: Exception) {
+
+    }
+
+    receiverRegistered = false
+  }
 
 }

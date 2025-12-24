@@ -13,6 +13,10 @@ function checkModuleStatus() {
 
 const emitter = MODULE ? new NativeEventEmitter(MODULE) : null;
 
+// ------------------------------
+// One-shot Getters
+// ------------------------------
+
 export function getVoltage() {
   checkModuleStatus();
   return MODULE.getVoltage();
@@ -53,7 +57,32 @@ export function getBatteryCycleCount() {
   return MODULE.getBatteryCycleCount();
 }
 
+// ------------------------------
+// Event-based Power State
+// ------------------------------
+
+export function addPowerStateListener() {
+  checkModuleStatus();
+  MODULE.addPowerStateListener();
+}
+
+export function removePowerStateListener() {
+  checkModuleStatus();
+  MODULE.removePowerStateListener();
+}
+
+export function onPowerStateChanged(callback) {
+  checkModuleStatus();
+
+  if (!emitter) {
+    throw new Error('react-native-power-info: Event emitter not available.');
+  }
+
+  return emitter.addListener('powerState', callback);
+}
+
 export default {
+  // One-shot Getters
   getVoltage,
   getCurrent,
   getBatteryLevel,
@@ -62,4 +91,8 @@ export default {
   getBatteryHealth,
   getBatteryTemperature,
   getBatteryCycleCount,
+  // Event-based Power State
+  addPowerStateListener,
+  removePowerStateListener,
+  onPowerStateChanged,
 };

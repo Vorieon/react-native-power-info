@@ -1,6 +1,6 @@
 {
   "name": "react-native-power-info",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Power and battery information for React Native",
   "main": "index.js",
   "react-native": "index.js",
